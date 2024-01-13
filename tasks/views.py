@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import login, logout, authenticate
 from django.db import IntegrityError
 from .forms import TaskForm
+from .models import Task
 
 # Create your views here.
 def home(request):
@@ -34,7 +35,8 @@ def signup(request):
         })
     
 def tasks(request):
-    return render(request,'tasks.html')
+    tasks= Task.objects.filter(user=request.user)
+    return render(request,'tasks.html', {'tasks':tasks})
 
 def createTask(request):
     if request.method =='GET':
@@ -42,10 +44,18 @@ def createTask(request):
         'form': TaskForm,
         })
     else:
-        print(request.POST)
-        return render(request,'createTask.html', {
-        'form': TaskForm,
-        })
+        try:
+            form = TaskForm(request.POST)
+            new_task=form.save(commit=False)
+            new_task.user=request.user
+            new_task.save()
+            return redirect('tasks')
+        except ValueError:
+            return render(request,'createTask.html', {
+            'form': TaskForm,
+            'error': 'Por favor proveer datos Validos'
+            })
+
 def signout(request):
     logout(request)
     return redirect ('home')
